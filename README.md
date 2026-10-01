@@ -1,16 +1,17 @@
 # Game Update Bot
 
-A Discord bot that monitors **Fortnite**, **VALORANT**, and **CS2** for game updates and notifies your server when a new version drops. Easily extensible to any game with a public version API.
+A Discord bot that monitors **Fortnite**, **VALORANT**, **CS2** and **Deadlock** for game updates and notifies your server when a new version drops. Easily extensible to any game with a public version API.
 
 ## How It Works
 
-Every 6 hours, a GitHub Actions cron job runs `check_update.py`. The script loops through each registered game, asks its public API for the current version, and compares it with the last-seen version stored in `version_data.json`. When a version changes, it posts a rich embed to your Discord channel through the Discord REST API. No always-on server is needed, so it runs **for free** on GitHub Actions.
+Every 30 minutes, a GitHub Actions cron job runs `check_update.py`. The script loops through each registered game, asks its public API for the current version, and compares it with the last-seen version stored in `version_data.json`. When a version changes, it posts a rich embed to your Discord channel through the Discord REST API. No always-on server is needed, so it runs **for free** on GitHub Actions.
 
 | Game | API | Auth | What It Detects |
 |------|-----|------|-----------------|
-| Fortnite | [fortnite-api.com](https://fortnite-api.com) `/v2/aes` | None | Build version changes |
+| Fortnite | Epic's public `fortnite/api/version` endpoint (live), plus [fortnite-api.com](https://fortnite-api.com) `/v2/aes` for the client build | None | A new release number (e.g. 42.20 → 42.30), or a new client build on the same release (a hotfix) |
 | VALORANT | [valorant-api.com](https://valorant-api.com) `/v1/version` | None | Client version changes |
 | CS2 | [Steam Web API](https://api.steampowered.com) `ISteamNews/GetNewsForApp` (app 730) | None | New Steam news posts tagged `patchnotes` |
+| Deadlock | [Steam Web API](https://api.steampowered.com) `ISteamNews/GetNewsForApp` (app 1422450, Valve's announcements feed only) | None | A new official Valve post (patch notes and big updates) |
 
 ## Project Structure
 
@@ -26,7 +27,7 @@ game-update-bot/
 
 ### Where the state is kept
 
-The last-seen versions (`version_data.json`) live on a separate **`state` branch** that holds only that file. At the start of each run the workflow loads the file from that branch. At the end it commits it back, and only if a version actually changed. The `main` branch therefore contains only code, with no bot commits every 6 hours. If the `state` branch is deleted, the next run recreates it and re-seeds the versions without sending notifications.
+The last-seen versions (`version_data.json`) live on a separate **`state` branch** that holds only that file. At the start of each run the workflow loads the file from that branch. At the end it commits it back, and only if a version actually changed. The `main` branch therefore contains only code, with no bot commits on every run. If the `state` branch is deleted, the next run recreates it and re-seeds the versions without sending notifications.
 
 ---
 
@@ -60,7 +61,7 @@ In your repo: **Settings > Secrets and variables > Actions > New repository secr
 git push
 ```
 
-The workflow runs every 6 hours automatically. Trigger it manually from the **Actions** tab to test.
+The workflow runs every 30 minutes automatically. Trigger it manually from the **Actions** tab to test.
 
 ---
 
@@ -111,8 +112,8 @@ That's it. The main loop handles state tracking, change detection, and Discord n
 
 Edit the `cron` line in `.github/workflows/game-update-check.yml` (UTC):
 
-- `0 */6 * * *` — every 6 hours (default)
-- `0 */3 * * *` — every 3 hours
+- `7,37 * * * *` — every 30 minutes (default)
+- `0 */6 * * *` — every 6 hours
 - `0 0 * * *` — once a day at midnight
 
 ## Test Locally

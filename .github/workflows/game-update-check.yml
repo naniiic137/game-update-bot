@@ -2,8 +2,9 @@ name: Game Update Check
 
 on:
   schedule:
-    # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: "0 */6 * * *"
+    # Every 30 minutes (at :07 and :37, off the busy top of the hour). Free for
+    # public repos; GitHub may still delay a scheduled run by a few minutes.
+    - cron: "7,37 * * * *"
   # Lets you trigger a run manually from the Actions tab to test it
   workflow_dispatch:
 

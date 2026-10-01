@@ -5,7 +5,7 @@ to a Discord channel via the REST API when an update is detected.
 
 Designed to be triggered on a schedule (e.g. GitHub Actions cron).
 
-Currently supported: Fortnite, VALORANT, CS2.
+Currently supported: Fortnite, VALORANT, CS2, Deadlock.
 Adding a new game: create check_xxx() and xxx_embed() functions, then add an
 entry to the GAMES list at the bottom of this file.
 """
@@ -81,25 +81,46 @@ def send_discord_embed(embed):
 
 # ---------------------------------------------------------------------------
 # Game: Fortnite
-# API: /v2/aes (build version) — free, no key
-# The AES build string changes only on actual client patches.  News data from
-# /v2/news/br is fetched for embed flavour text but NOT used for version
-# comparison — the news hash rotates too frequently (shop/MOTD changes) and
-# would cause false-positive notifications.
+# Release number: Epic's own public version endpoint (live, no key). It changes
+# the moment a new release goes out, unlike the community API below, which only
+# updates once the new build has been datamined (that lag hid 42.30 on 1 Oct 2026).
+# Client build (CL): fortnite-api.com /v2/aes, used for the CL shown in the
+# message and to spot hotfix patches that keep the same release number.
+# News from /v2/news/br is flavour text only, never compared (it rotates often).
 # ---------------------------------------------------------------------------
 
+EPIC_VERSION_URL = "https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/version"
+FORTNITE_AES_URL = "https://fortnite-api.com/v2/aes"
+
+
+def fortnite_release_of(version):
+    """'++Fortnite+Release-42.20-CL-58011042' -> '42.20'; '42.30' stays '42.30'."""
+    if version and "Release-" in version:
+        return version.split("Release-")[1].split("-CL-")[0]
+    return version
+
+
 def fortnite_check():
-    build_str, release, cl = None, "?", "?"
-    body = fetch_json("https://fortnite-api.com/v2/aes")
+    release = None
+    epic = fetch_json(EPIC_VERSION_URL)
+    if epic and epic.get("version"):
+        release = str(epic["version"])
+
+    build_str, api_release, cl = "", None, "?"
+    body = fetch_json(FORTNITE_AES_URL)
     if body:
-        build_str = (body.get("data") or {}).get("build")
-        if build_str and "Release-" in build_str:
+        build_str = (body.get("data") or {}).get("build") or ""
+        if "Release-" in build_str:
             parts = build_str.split("Release-")[1].split("-CL-")
             if len(parts) == 2:
-                release, cl = parts
+                api_release, cl = parts
 
-    if not build_str:
+    if release is None:  # Epic unreachable: fall back to the community API
+        release = api_release
+    if release is None:
         return None
+    if api_release != release:  # the community API hasn't caught up with this release yet
+        cl, build_str = "?", ""
 
     motd_title, motd_body = "", ""
     news = fetch_json("https://fortnite-api.com/v2/news/br")
@@ -110,13 +131,26 @@ def fortnite_check():
             motd_body = motds[0].get("body", "")
 
     return {
-        "version": build_str,
-        "build": build_str,
+        "version": release,
         "release": release,
         "cl": cl,
+        "build": build_str,
         "motd_title": motd_title,
         "motd_body": motd_body,
     }
+
+
+def fortnite_compare(old, new):
+    """'update' for a new release, 'hotfix' for a new client build of the same
+    release, 'silent' when only the build number became known, else None."""
+    if fortnite_release_of(old.get("version")) != new["release"]:
+        return "update"
+    old_cl, new_cl = old.get("cl", "?"), new.get("cl", "?")
+    if new_cl == "?" or old_cl == new_cl:
+        return None
+    if old_cl == "?":
+        return "silent"
+    return "hotfix"
 
 
 def fortnite_embed(info):
@@ -138,9 +172,11 @@ def fortnite_embed(info):
         "value": "[View on Fortnite News](https://www.fortnite.com/news)",
         "inline": False,
     })
+    hotfix = info.get("kind") == "hotfix"
     return {
-        "title": "\U0001f680 Fortnite Update Detected!",
-        "description": "A new Fortnite update is available for download!",
+        "title": "\U0001f527 Fortnite Hotfix Detected!" if hotfix else "\U0001f680 Fortnite Update Detected!",
+        "description": ("A new Fortnite hotfix patch is available for download!" if hotfix
+                        else f"Fortnite {info['release']} is out and ready to download!"),
         "color": 0x00BFFF,
         "fields": fields,
         "footer": {"text": "Download size varies — check the Epic Games Launcher"},
@@ -247,14 +283,67 @@ def cs2_embed(info):
 
 
 # ---------------------------------------------------------------------------
+# Game: Deadlock
+# API: Steam ISteamNews/GetNewsForApp (free, no key), limited to Valve's own
+# announcements feed. Every Deadlock patch ("Minor Update - 09-16-2026") and big
+# update ("City Never Sleeps") is posted there; the press articles that fill the
+# app's general news feed are left out by the feed filter.
+# ---------------------------------------------------------------------------
+
+DEADLOCK_NEWS_URL = (
+    "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
+    "?appid=1422450&count=5&maxlength=300&feeds=steam_community_announcements&format=json"
+)
+
+
+def deadlock_check():
+    news = fetch_json(DEADLOCK_NEWS_URL)
+    if not news:
+        return None
+    items = (news.get("appnews") or {}).get("newsitems") or []
+    if not items:
+        return None
+    item = max(items, key=lambda i: i.get("date", 0))
+    return {
+        "version": item["gid"],
+        "title": item.get("title", "Deadlock Update"),
+        "url": item.get("url", ""),
+        "patchnotes": "patchnotes" in (item.get("tags") or []),
+    }
+
+
+def deadlock_embed(info):
+    title = info.get("title", "Deadlock Update")
+    url = info.get("url") or "https://store.steampowered.com/news/app/1422450"
+    is_patch = info.get("patchnotes") or "update" in title.lower()
+    return {
+        "title": "\U0001f680 Deadlock Update Detected!" if is_patch else "\U0001f4e2 Deadlock News from Valve",
+        "description": ("A new Deadlock update is out! Steam will download it automatically."
+                        if is_patch else "Valve posted a new Deadlock announcement."),
+        "color": 0xC8A165,
+        "fields": [{"name": "\U0001f4f0 Patch Notes" if is_patch else "\U0001f4f0 Announcement",
+                    "value": f"[{title}]({url})", "inline": False}],
+        "footer": {"text": "Deadlock is in early access on Steam"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Game registry — add new games here
 # ---------------------------------------------------------------------------
 
 GAMES = [
-    {"slug": "fortnite",  "name": "Fortnite",  "check": fortnite_check,  "embed": fortnite_embed},
+    {"slug": "fortnite",  "name": "Fortnite",  "check": fortnite_check,  "embed": fortnite_embed,
+     "compare": fortnite_compare},
     {"slug": "valorant",  "name": "VALORANT",   "check": valorant_check,  "embed": valorant_embed},
     {"slug": "cs2",        "name": "CS2",        "check": cs2_check,       "embed": cs2_embed},
+    {"slug": "deadlock",  "name": "Deadlock",   "check": deadlock_check,  "embed": deadlock_embed},
 ]
+
+
+def default_compare(old, new):
+    """Any change of the version key is an update."""
+    return "update" if old.get("version") != new["version"] else None
 
 
 # ---------------------------------------------------------------------------
@@ -282,15 +371,19 @@ def main():
                 continue
 
             version = info["version"]
-            cached = (state.get(slug) or {}).get("version")
-            is_new = cached is not None and version != cached
+            old = state.get(slug) or {}
+            cached = old.get("version")
+            kind = (game.get("compare") or default_compare)(old, info) if cached is not None else None
 
-            if is_new:
-                logger.info("[%s] New version: %s (was %s)", name, version, cached)
+            if kind in ("update", "hotfix"):
+                info["kind"] = kind
+                logger.info("[%s] New %s: %s (was %s)", name, kind, version, cached)
                 if not send_discord_embed(game["embed"](info)):
                     send_failures += 1
                     logger.error("[%s] Discord send FAILED — not updating state so it retries next run", name)
                     continue
+            elif kind == "silent":
+                logger.info("[%s] Same release, details filled in (%s); no message", name, version)
             elif cached is None:
                 logger.info("[%s] First run; seeding state with %s", name, version)
             else:
@@ -300,7 +393,7 @@ def main():
                 continue
 
             state[slug] = {
-                **info,
+                **{k: v for k, v in info.items() if k != "kind"},
                 "seen_at": datetime.now(timezone.utc).isoformat(),
             }
         except Exception:
