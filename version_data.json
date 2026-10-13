@@ -9,10 +9,10 @@
     "seen_at": "2026-10-01T19:06:25.748559+00:00"
   },
   "valorant": {
-    "version": "13.06.00.5590001",
-    "release": "13.06",
-    "build_date": "2026-09-25T18:14:25Z",
-    "seen_at": "2026-09-29T05:11:07.726675+00:00"
+    "version": "13.08.00.5627607",
+    "release": "13.08",
+    "build_date": "2026-10-01T20:58:39Z",
+    "seen_at": "2026-10-13T23:06:24.504781+00:00"
   },
   "cs2": {
     "version": "1846018067931597",
@@ -21,10 +21,10 @@
     "seen_at": "2026-10-08T23:56:26.737008+00:00"
   },
   "deadlock": {
-    "version": "1846018067934643",
-    "title": "Make Your Move.",
-    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067934643",
+    "version": "1846018067945303",
+    "title": "Fairfax Industries Employee Spotlight",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067945303",
     "patchnotes": false,
-    "seen_at": "2026-10-09T23:12:17.646242+00:00"
+    "seen_at": "2026-10-13T23:06:25.146033+00:00"
   }
 }
