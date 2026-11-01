@@ -1,12 +1,12 @@
 {
   "fortnite": {
-    "version": "42.40",
-    "release": "42.40",
-    "cl": "59086525",
-    "build": "++Fortnite+Release-42.40-CL-59086525",
-    "motd_title": "Fortnite: Override Is Here!",
-    "motd_body": "Break the rules. Change the game! Activate Overrides to switch up the game and explore areas inspired by gaming legends like Sonic, Tetris, and Pac-Man as the future of the Island unfolds.",
-    "seen_at": "2026-10-15T14:23:19.399149+00:00"
+    "version": "43.00",
+    "release": "43.00",
+    "cl": "?",
+    "build": "",
+    "motd_title": "Bring Your Squad Back From the Brink",
+    "motd_body": "All hope is not lost when a teammate goes down! When they fall, they leave behind a Reboot Card. Pick it up, take it to a Reboot Van, and bring them back into the fight for a better shot at victory.",
+    "seen_at": "2026-11-01T05:53:52.693424+00:00"
   },
   "valorant": {
     "version": "13.09.00.5777412",
