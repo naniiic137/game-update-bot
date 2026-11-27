@@ -2,11 +2,11 @@
   "fortnite": {
     "version": "43.11",
     "release": "43.11",
-    "cl": "?",
-    "build": "",
+    "cl": "60803671",
+    "build": "++Fortnite+Release-43.11-CL-60803671",
     "motd_title": "Golden Week + Community Day",
     "motd_body": "Starting 11/28, refreshed loot meets unvaulted Treasure during Golden Week, where each Captain\u2019s golden goods are back in Chests alongside 2X Sprite Dust and XP! Then, hop aboard for Community Day on 12/5.",
-    "seen_at": "2026-11-24T10:23:45.321622+00:00"
+    "seen_at": "2026-11-27T00:31:44.598183+00:00"
   },
   "valorant": {
     "version": "13.10.00.5893614",
@@ -21,10 +21,10 @@
     "seen_at": "2026-11-24T00:19:19.364667+00:00"
   },
   "deadlock": {
-    "version": "1848664643342973",
-    "title": "Ranked - Beta Season 2",
-    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848664643342973",
-    "patchnotes": false,
-    "seen_at": "2026-11-05T21:57:12.549872+00:00"
+    "version": "1850460852986472",
+    "title": "Minor Update - 11-26-2026",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1850460852986472",
+    "patchnotes": true,
+    "seen_at": "2026-11-27T00:31:45.301390+00:00"
   }
 }
